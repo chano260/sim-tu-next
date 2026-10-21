@@ -1,0 +1,16 @@
+[
+  {
+    "username": "admin",
+    "email": "admin@smanegeri3buru.my.id",
+    "name": "Administrator TU",
+    "role": "admin",
+    "passwordHash": "8e556d13566e52191a661d655e4d87b6:ae2d325b3b5bd0bbab8cbb501e3fae9d805da32a020893877467764839367e369eefe08004798f0d10c03a45ad644365c8d9611a0578d48200f0a8ca1c5d0143"
+  },
+  {
+    "username": "tu",
+    "email": "tu@smanegeri3buru.my.id",
+    "name": "Staf Layanan TU",
+    "role": "tu",
+    "passwordHash": "ce42f42ed1d41f8cfc247bd29d483801:35dfd2db6eb0c46e5b86355a6d41cb37cd4e9dc3e25954678fa6ea51ac098efc040372b88316a099b1be3b1e3c947a7f5dda765b39a6ad59fb98750cbb11e885"
+  }
+]
