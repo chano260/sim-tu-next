@@ -180,7 +180,7 @@ export default function PersuratanModule({
         nip: 'Nip.19870131 202321 2024',
         pangkatGolongan: 'GOL.IX',
         jabatan: 'GURU',
-        alamat: '...'
+        alamat: 'Waekerta, Kec Waeapo Kab Buru'
       },
       {
         no: 2,
@@ -188,7 +188,7 @@ export default function PersuratanModule({
         nip: 'Nip.19970107 202321 2025',
         pangkatGolongan: 'GOL.IX',
         jabatan: 'GURU',
-        alamat: '...'
+        alamat: 'Waekerta, Kec Waeapo Kab Buru'
       },
       {
         no: 3,
@@ -196,7 +196,7 @@ export default function PersuratanModule({
         nip: 'Nip.19840718 202421 2006',
         pangkatGolongan: 'GOL.IX',
         jabatan: 'GURU',
-        alamat: '...'
+        alamat: 'Waekerta, Kec Waeapo Kab Buru'
       }
     ],
     keperluanTugas: 'mengikuti Lomba Pembacaan Literasi dan Penulisan Resensi',

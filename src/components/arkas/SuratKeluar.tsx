@@ -338,7 +338,22 @@ export default function SuratKeluar({
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     if (name === "jenis_surat") {
-      setDynamicData({ tugas_banyak: [] });
+      if (value === "Surat Tugas (Banyak Orang)") {
+        setDynamicData({
+          tugas_banyak: [
+            {
+              nama: "",
+              nip: "",
+              pangkat: "",
+              jabatan: "Guru",
+              alamat: "Waekerta, Kec Waeapo Kab Buru",
+              keterangan: "",
+            },
+          ],
+        });
+      } else {
+        setDynamicData({ tugas_banyak: [] });
+      }
     }
   };
 
@@ -462,13 +477,17 @@ Yang bertanda tangan dibawah ini Kepala SMA Negeri 3 Buru
         if (dynamicData.tugas_banyak && dynamicData.tugas_banyak.length > 0) {
           dynamicData.tugas_banyak.forEach((peserta: any, idx: any) => {
             const nipText = peserta.nip ? `<br/>Nip.${peserta.nip}` : "";
+            const alamatPeserta =
+              peserta.alamat && peserta.alamat !== "..."
+                ? peserta.alamat
+                : "Waekerta, Kec Waeapo Kab Buru";
             barisTabel += `
                         <tr>
                             <td style="border: 1px solid black; padding: 5px; text-align: center;">${idx + 1}</td>
                             <td style="border: 1px solid black; padding: 5px;">${peserta.nama || "..."}${nipText}</td>
                             <td style="border: 1px solid black; padding: 5px; text-align: center;">${peserta.pangkat || "..."}</td>
                             <td style="border: 1px solid black; padding: 5px; text-align: center;">${peserta.jabatan || "..."}</td>
-                            <td style="border: 1px solid black; padding: 5px;">${peserta.alamat || "..."}</td>
+                            <td style="border: 1px solid black; padding: 5px;">${alamatPeserta}</td>
                         </tr>`;
           });
         } else {
@@ -1334,12 +1353,18 @@ Dengan ini menerangkan bahwa
                       const newPeserta = [...dynamicData.tugas_banyak];
 
                       if (selected) {
-                        // Jika nama ada di database, otomatis isi NIP dan Pangkat
+                        // Jika nama ada di database, otomatis isi NIP, Pangkat, Jabatan, dan Alamat
                         newPeserta[index].nama = selected.nama;
                         newPeserta[index].nip =
                           selected.nip !== "-" ? selected.nip : "";
                         newPeserta[index].pangkat =
                           selected.pangkat !== "-" ? selected.pangkat : "";
+                        if (!newPeserta[index].jabatan) {
+                          newPeserta[index].jabatan = selected.nama.includes("ANTON LA HARI") ? "Kepala Sekolah" : "Guru";
+                        }
+                        if (!newPeserta[index].alamat || newPeserta[index].alamat === "...") {
+                          newPeserta[index].alamat = "Waekerta, Kec Waeapo Kab Buru";
+                        }
                       } else {
                         // Jika tidak (kembali ke kosong), biarkan kosong
                         newPeserta[index].nama = e.target.value;
@@ -1412,7 +1437,23 @@ Dengan ini menerangkan bahwa
                     required
                   />
 
-                  {/* --- 5. KETERANGAN TAMBAHAN --- */}
+                  {/* --- 5. INPUT ALAMAT PESERTA --- */}
+                  <input
+                    style={inputStyle}
+                    type="text"
+                    placeholder="Alamat (Cth: Waekerta, Kec Waeapo Kab Buru)"
+                    value={peserta.alamat !== undefined ? peserta.alamat : "Waekerta, Kec Waeapo Kab Buru"}
+                    onChange={(e) => {
+                      const newPeserta = [...dynamicData.tugas_banyak];
+                      newPeserta[index].alamat = e.target.value;
+                      setDynamicData({
+                        ...dynamicData,
+                        tugas_banyak: newPeserta,
+                      });
+                    }}
+                  />
+
+                  {/* --- 6. KETERANGAN TAMBAHAN --- */}
                   <input
                     style={inputStyle}
                     type="text"
@@ -1442,7 +1483,8 @@ Dengan ini menerangkan bahwa
                       nama: "",
                       nip: "",
                       pangkat: "",
-                      jabatan: "",
+                      jabatan: "Guru",
+                      alamat: "Waekerta, Kec Waeapo Kab Buru",
                       keterangan: "",
                     },
                   ],

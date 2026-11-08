@@ -832,7 +832,7 @@ export default function CetakSuratResmi({
                   </td>
                   <td className="border border-black p-2 text-center align-top">
                     <InsetText
-                      value={peserta.alamat}
+                      value={peserta.alamat && peserta.alamat !== '...' ? peserta.alamat : "Waekerta, Kec Waeapo Kab Buru"}
                       onChange={onUpdateTugasBanyak ? (val) => {
                         const copy = [...dataTugasBanyak.daftarPeserta];
                         copy[idx].alamat = val;
