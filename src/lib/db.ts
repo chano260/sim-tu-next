@@ -215,15 +215,21 @@ export async function readDb(collectionName: string): Promise<any[]> {
       const [rows]: any = await p.query(`SELECT * FROM \`${tableName}\` ORDER BY created_at DESC`);
       if (Array.isArray(rows)) {
         return rows.map((row) => {
+          let item = row;
           if (row.raw_data) {
             try {
               const parsed = JSON.parse(row.raw_data);
-              return { ...row, ...parsed };
+              item = { ...row, ...parsed };
             } catch (e) {
-              return row;
+              item = row;
             }
           }
-          return row;
+          if (item.isi_surat && typeof item.isi_surat === 'string') {
+            item.isi_surat = item.isi_surat
+              .replace(/(<td[^>]*>)\s*\.{2,}\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$2')
+              .replace(/>\s*\.{2,}\s*</g, '>Waekerta, Kec Waeapo Kab Buru<');
+          }
+          return item;
         });
       }
     } catch (e) {
@@ -239,7 +245,18 @@ export async function readDb(collectionName: string): Promise<any[]> {
   }
   try {
     const data = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => {
+        if (item.isi_surat && typeof item.isi_surat === 'string') {
+          item.isi_surat = item.isi_surat
+            .replace(/(<td[^>]*>)\s*\.{2,}\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$2')
+            .replace(/>\s*\.{2,}\s*</g, '>Waekerta, Kec Waeapo Kab Buru<');
+        }
+        return item;
+      });
+    }
+    return parsed;
   } catch (e) {
     return [];
   }

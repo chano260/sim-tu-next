@@ -2,15 +2,21 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 
-// 1. Baca env
+// 1. Baca env secara komprehensif
 const possiblePaths = [
   path.join(process.cwd(), '.env'),
   path.join(process.cwd(), '.env.local'),
-  '/www/wwwroot/simtu.smanegeri3buru.my.id/.env'
+  path.join(process.cwd(), '.env.production'),
+  '/www/wwwroot/simtu.smanegeri3buru.my.id/.env',
+  '/www/wwwroot/simtu.smanegeri3buru.my.id/.env.local',
+  '/www/wwwroot/sim-tu-next/.env'
 ];
 
+let envFound = false;
 for (const envPath of possiblePaths) {
   if (fs.existsSync(envPath)) {
+    envFound = true;
+    console.log('Membaca konfigurasi env dari:', envPath);
     const lines = fs.readFileSync(envPath, 'utf8').split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
@@ -28,10 +34,21 @@ for (const envPath of possiblePaths) {
   }
 }
 
+function fixHtmlAlamat(html) {
+  if (!html || typeof html !== 'string') return html;
+  return html
+    .replace(/(<td[^>]*>)\s*(\.{2,}|…|&hellip;)\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$3')
+    .replace(/>\s*(\.{2,}|…|&hellip;)\s*</g, '>Waekerta, Kec Waeapo Kab Buru<');
+}
+
 async function run() {
-  console.log('=== MEMULAI PERBAIKAN ALAMAT DI DATABASE ===');
-  
-  // 1. Coba perbaiki di MySQL jika terkonfigurasi
+  console.log('====================================================');
+  console.log('  MEMULAI PERBAIKAN ALAMAT TITIK-TITIK DI DATABASE  ');
+  console.log('====================================================');
+
+  let totalUpdated = 0;
+
+  // 1. Coba perbaiki via MySQL
   const host = process.env.DB_HOST || '127.0.0.1';
   const port = Number(process.env.DB_PORT || 3306);
   const user = process.env.DB_USER || process.env.DB_USERNAME;
@@ -40,45 +57,94 @@ async function run() {
 
   if (user && database) {
     try {
-      console.log(`Menghubungkan ke MySQL ${user}@${host}:${port}/${database}...`);
+      console.log(`\n[MySQL] Menghubungkan ke ${user}@${host}:${port}/${database}...`);
       const conn = await mysql.createConnection({ host, port, user, password, database });
-      
-      const queries = [
-        "UPDATE `surat_keluar` SET `isi_surat` = REPLACE(`isi_surat`, '>...<', '>Waekerta, Kec Waeapo Kab Buru<')",
-        "UPDATE `surat_keluar` SET `isi_surat` = REPLACE(`isi_surat`, '> ... <', '>Waekerta, Kec Waeapo Kab Buru<')",
-        "UPDATE `surat_keluar` SET `isi_surat` = REPLACE(`isi_surat`, '>... </td>', '>Waekerta, Kec Waeapo Kab Buru</td>')",
-        "UPDATE `surat_keluar` SET `isi_surat` = REPLACE(`isi_surat`, '> ...</td>', '>Waekerta, Kec Waeapo Kab Buru</td>')"
-      ];
+      console.log('[MySQL] Terhubung sukses!');
 
-      let totalUpdated = 0;
-      for (const q of queries) {
-        const [res] = await conn.query(q);
-        totalUpdated += res.affectedRows || 0;
+      const [rows] = await conn.query('SELECT id, no_surat, isi_surat, raw_data FROM `surat_keluar`');
+      console.log(`[MySQL] Memeriksa ${rows.length} surat di tabel surat_keluar...`);
+
+      for (const row of rows) {
+        let needsUpdate = false;
+        let newIsi = row.isi_surat;
+        let newRaw = row.raw_data;
+
+        if (row.isi_surat && row.isi_surat.includes('..')) {
+          const fixed = fixHtmlAlamat(row.isi_surat);
+          if (fixed !== row.isi_surat) {
+            newIsi = fixed;
+            needsUpdate = true;
+          }
+        }
+
+        if (row.raw_data && row.raw_data.includes('..')) {
+          const fixedRaw = fixHtmlAlamat(row.raw_data);
+          if (fixedRaw !== row.raw_data) {
+            newRaw = fixedRaw;
+            needsUpdate = true;
+          }
+        }
+
+        if (needsUpdate) {
+          await conn.query(
+            'UPDATE `surat_keluar` SET `isi_surat` = ?, `raw_data` = ? WHERE `id` = ?',
+            [newIsi, newRaw, row.id]
+          );
+          totalUpdated++;
+          console.log(`  -> SUKSES UPDATE SURAT: [No: ${row.no_surat || row.id}] Alamat berhasil diperbaiki!`);
+        }
       }
 
-      console.log(`SUKSES MySQL: ${totalUpdated} baris surat di database berhasil diperbarui!`);
       await conn.end();
+      console.log(`[MySQL] Selesai. Total surat yang diperbaiki di MySQL: ${totalUpdated}`);
     } catch (e) {
-      console.warn('Peringatan MySQL:', e.message);
+      console.warn('[MySQL Warning]:', e.message);
     }
   } else {
-    console.log('MySQL tidak terkonfigurasi di env, memeriksa file JSON lokal...');
+    console.log('\n[Info] Kredensial MySQL tidak ditemukan di env.');
   }
 
-  // 2. Perbaiki di data/surat-keluar.json jika ada
-  const jsonPath = path.join(process.cwd(), 'data', 'surat-keluar.json');
-  if (fs.existsSync(jsonPath)) {
-    try {
-      let content = fs.readFileSync(jsonPath, 'utf8');
-      content = content.replace(/>\s*\.{2,}\s*</g, '>Waekerta, Kec Waeapo Kab Buru<');
-      fs.writeFileSync(jsonPath, content, 'utf8');
-      console.log('SUKSES JSON: data/surat-keluar.json berhasil diperbarui!');
-    } catch (e) {
-      console.warn('Gagal update JSON:', e.message);
+  // 2. Coba perbaiki via file JSON lokal (jika memakai fallback JSON)
+  const dataDir = path.join(process.cwd(), 'data');
+  const jsonFiles = ['surat-keluar.json', 'surat_keluar.json'];
+
+  for (const jf of jsonFiles) {
+    const jsonPath = path.join(dataDir, jf);
+    if (fs.existsSync(jsonPath)) {
+      console.log(`\n[JSON] Memeriksa file lokal ${jf}...`);
+      try {
+        const raw = fs.readFileSync(jsonPath, 'utf8');
+        const list = JSON.parse(raw);
+        let jsonUpdatedCount = 0;
+
+        if (Array.isArray(list)) {
+          for (const item of list) {
+            if (item.isi_surat && item.isi_surat.includes('..')) {
+              const fixed = fixHtmlAlamat(item.isi_surat);
+              if (fixed !== item.isi_surat) {
+                item.isi_surat = fixed;
+                jsonUpdatedCount++;
+                console.log(`  -> SUKSES UPDATE JSON: [No: ${item.no_surat || item.id}] Alamat diperbaiki!`);
+              }
+            }
+          }
+
+          if (jsonUpdatedCount > 0) {
+            fs.writeFileSync(jsonPath, JSON.stringify(list, null, 2), 'utf8');
+            console.log(`[JSON] File ${jf} berhasil disimpan (${jsonUpdatedCount} surat diperbarui).`);
+          } else {
+            console.log(`[JSON] Semua surat di ${jf} sudah rapi.`);
+          }
+        }
+      } catch (err) {
+        console.warn(`[JSON Warning] Gagal memproses ${jf}:`, err.message);
+      }
     }
   }
 
-  console.log('=== SELESAI ===');
+  console.log('\n====================================================');
+  console.log('                 PROSES SELESAI                     ');
+  console.log('====================================================');
 }
 
 run();

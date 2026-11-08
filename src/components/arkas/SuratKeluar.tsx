@@ -1037,7 +1037,8 @@ Dengan ini menerangkan bahwa
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
       .replace(/on\w+\s*=\s*[^>\s]+/gi, '')
       .replace(/javascript:/gi, 'blocked:')
-      .replace(/(<td[^>]*>)\s*\.{2,}\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$2');
+      .replace(/(<td[^>]*>)\s*(\.{2,}|…|&hellip;)\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$3')
+      .replace(/>\s*(\.{2,}|…|&hellip;)\s*</g, '>Waekerta, Kec Waeapo Kab Buru<');
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
