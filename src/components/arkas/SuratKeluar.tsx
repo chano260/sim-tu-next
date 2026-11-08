@@ -1030,13 +1030,14 @@ Dengan ini menerangkan bahwa
     const activeSizeKiri = Math.min(Math.max(Number(logoKiriSize || rawKiriSize) || 80, 30), 150);
     const activeSizeKanan = Math.min(Math.max(Number(logoKananSize || rawKananSize) || 80, 30), 150);
 
-    // OWASP A03: Sanitasi isi surat sebelum disuntikkan ke DOM
+    // OWASP A03: Sanitasi isi surat sebelum disuntikkan ke DOM & perbaiki jika ada alamat titik-titik
     const cleanIsiSurat = String(isi_surat)
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
       .replace(/on\w+\s*=\s*[^>\s]+/gi, '')
-      .replace(/javascript:/gi, 'blocked:');
+      .replace(/javascript:/gi, 'blocked:')
+      .replace(/(<td[^>]*>)\s*\.{2,}\s*(<\/td>)/gi, '$1Waekerta, Kec Waeapo Kab Buru$2');
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
